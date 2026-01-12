@@ -6,6 +6,28 @@ if(!isset($_SESSION['admin'])){
 }
 
 include "config.php";
+// Count unread messages
+$msgRes = mysqli_query($conn,"SELECT COUNT(*) as total FROM contacts WHERE status='Unread'");
+$msgCount = mysqli_fetch_assoc($msgRes)['total'];
+
+/* ============ ACCEPT ORDER ============ */
+if(isset($_GET['accept_order'])){
+    $id = $_GET['accept_order'];
+    mysqli_query($conn,"UPDATE buy_orders SET status='Accepted' WHERE id=$id");
+    header("Location: admin.php");
+    exit();
+}
+
+/* ============ DELETE ORDER ============ */
+if(isset($_GET['delete_order'])){
+    $id = $_GET['delete_order'];
+    mysqli_query($conn,"DELETE FROM buy_orders WHERE id=$id");
+    header("Location: admin.php");
+    exit();
+}
+
+
+
 
 // ================= ADD PRODUCT =================
 if(isset($_POST['add'])){
@@ -26,6 +48,7 @@ if(isset($_GET['delete'])){
     $id = $_GET['delete'];
     mysqli_query($conn,"DELETE FROM products WHERE id=$id");
 }
+
 
 // ================= GET PRODUCT FOR EDIT =================
 $editData = null;
@@ -66,6 +89,7 @@ if(isset($_POST['update'])){
 <head>
 <title>sweet</title>
 <style>
+
 body{
     font-family:Arial;
     background:#f8f8f8;
@@ -99,9 +123,41 @@ a{
 .logout{
     float:right;
 }
+.msg-icon{
+    position:fixed;
+    right:20px;
+    bottom:20px;
+    background:#0084ff;
+    color:white;
+    width:55px;
+    height:55px;
+    border-radius:50%;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    font-size:26px;
+    text-decoration:none;
+}
+
+.badge{
+    position:absolute;
+    top:5px;
+    right:5px;
+    background:red;
+    color:white;
+    font-size:12px;
+    padding:3px 7px;
+    border-radius:50%;
+}
 </style>
 </head>
 <body>
+    <a href="admin_messages.php" class="msg-icon">
+    💬
+    <?php if($msgCount > 0): ?>
+        <span class="badge"><?= $msgCount ?></span>
+    <?php endif; ?>
+</a>
 
 <h2>🧇 The Sweet Corner – Admin Panel
 <a class="logout" href="logout.php"> Logout</a>
@@ -167,6 +223,59 @@ while($row = mysqli_fetch_assoc($res)){
 </tr>
 <?php } ?>
 
+</table>
+<h2 style="margin-top:40px;">🛒 Orders From Menu</h2>
+
+<table border="1" width="100%" cellpadding="10">
+<tr>
+    <th>ID</th>
+    <th>Product</th>
+    <th>Price</th>
+    <th>Quantity</th>
+    <th>Total</th>
+    <th>Location</th>
+    <th>Phone</th>
+    <th>Status</th>
+    <th>Date</th>
+    <th>Actions</th>
+</tr>
+
+<?php
+$res = mysqli_query($conn,"SELECT * FROM buy_orders ORDER BY created_at DESC");
+while($o = mysqli_fetch_assoc($res)){
+?>
+<tr>
+    <td><?= $o['id'] ?></td>
+    <td><?= $o['product_name'] ?></td>
+    <td><?= $o['price'] ?> DA</td>
+    <td><?= $o['quantity'] ?></td>
+    <td><?= $o['total'] ?> DA</td>
+    <td><?= $o['location'] ?></td>
+    <td><?= $o['phone'] ?></td>
+
+    <td>
+        <?php if($o['status']=="Pending"): ?>
+            ⏳ Pending
+        <?php else: ?>
+            ✅ Accepted
+        <?php endif; ?>
+    </td>
+
+    <td><?= $o['created_at'] ?></td>
+
+    <td>
+        <?php if($o['status']=="Pending"): ?>
+            <a href="admin.php?accept_order=<?= $o['id'] ?>">✅ Accept</a><br>
+        <?php endif; ?>
+
+        <a style="color:red"
+           href="admin.php?delete_order=<?= $o['id'] ?>"
+           onclick="return confirm('Delete this order?')">
+           🗑 Delete
+        </a>
+    </td>
+</tr>
+<?php } ?>
 </table>
 
 </body>
